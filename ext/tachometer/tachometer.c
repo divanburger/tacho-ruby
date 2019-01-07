@@ -30,10 +30,6 @@ static void tachometer_event(VALUE tpval, void *data) {
     rb_trace_arg_t* trace_arg;
     rb_event_flag_t event_flag;
 
-    if (!profile->recording) {
-        rb_raise(rb_eRuntimeError, "Event while profile was stopped");
-    }
-
     trace_arg = rb_tracearg_from_tracepoint(tpval);
     event_flag = rb_tracearg_event_flag(trace_arg);
 
@@ -128,7 +124,6 @@ static VALUE tch_profile_start(VALUE self, VALUE filename, VALUE name) {
     RB_GC_GUARD(filename);
 
     profile->recording = 1;
-    printf("---------------------------------------- STARTED RECORDING\n");
 
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
     profile->start_time = (long)time.tv_sec * 1000000000 + (long)time.tv_nsec;
@@ -161,10 +156,9 @@ static VALUE tch_profile_stop(VALUE self) {
 
         rb_tracepoint_disable(profile->tracepoint);
 
-        printf("---------------------------------------- STOPPED RECORDING\n");
         profile->recording = 0;
     } else {
-        rb_raise(rb_eRuntimeError, "Not currently recording - finish");
+        rb_raise(rb_eRuntimeError, "Not currently recording");
     }
 
     return Qnil;
