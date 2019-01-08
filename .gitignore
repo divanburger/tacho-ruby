@@ -12,4 +12,8 @@
 *.a
 mkmf.log
 
+*.gem
+
+tacho/*.tch
+
 .idea/
