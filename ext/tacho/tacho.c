@@ -3,6 +3,12 @@
 #include <ruby/ruby.h>
 #include <ruby/debug.h>
 
+VALUE rb_mTacho;
+VALUE rb_cTachoProfile;
+ID    id_wall;
+ID    id_process;
+ID    id_thread;
+
 static inline void write_header(tch_profile* profile, char type, uint64_t time) {
     uint64_t c = ((time - profile->start_time) << 8) | type;
     fwrite(&c, sizeof(uint64_t), 1, profile->output);
@@ -33,7 +39,7 @@ static void tacho_event(VALUE tpval, void *data) {
     trace_arg = rb_tracearg_from_tracepoint(tpval);
     event_flag = rb_tracearg_event_flag(trace_arg);
 
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
+    clock_gettime(profile->clock_type, &time);
     itime = (long)time.tv_sec * 1000000000 + (long)time.tv_nsec;
 
     if (event_flag == RUBY_EVENT_CALL) {
@@ -70,9 +76,6 @@ static void tacho_event(VALUE tpval, void *data) {
     }
 }
 
-VALUE rb_mTacho;
-VALUE rb_cTachoProfile;
-
 static tch_profile* tch_profile_get_profile(VALUE self) {
     return (tch_profile*)RDATA(self)->data;
 }
@@ -107,11 +110,12 @@ static VALUE tch_profile_initialize(VALUE self) {
     return self;
 }
 
-static VALUE tch_profile_start(VALUE self, VALUE filename, VALUE name) {
+static VALUE tch_profile_start(VALUE self, VALUE filename, VALUE name, VALUE clock_type) {
     tch_profile* profile = tch_profile_get_profile(self);
 
     struct timespec time;
     uint32_t name_length;
+    ID clock_type_id;
 
     profile->output = fopen(StringValueCStr(filename), "wb");
     profile->buffer_count = 0;
@@ -125,7 +129,24 @@ static VALUE tch_profile_start(VALUE self, VALUE filename, VALUE name) {
 
     profile->recording = 1;
 
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
+    if (NIL_P(clock_type)) {
+        profile->clock_type = CLOCK_MONOTONIC;
+    } else if (TYPE(clock_type) == T_SYMBOL) {
+        clock_type_id = SYM2ID(clock_type);
+        if (id_wall == clock_type_id) {
+            profile->clock_type = CLOCK_MONOTONIC;
+        } else if (id_process == clock_type_id) {
+            profile->clock_type = CLOCK_PROCESS_CPUTIME_ID;
+        } else if (id_thread == clock_type_id) {
+            profile->clock_type = CLOCK_THREAD_CPUTIME_ID;
+        } else {
+            rb_raise(rb_eTypeError, "not valid value. Must be one of :wall, :process or :thread got :%s", rb_id2name(clock_type_id));
+        }
+    } else {
+        rb_raise(rb_eTypeError, "not valid value. Must be a symbol of one of :wall, :process or :thread");
+    }
+
+    clock_gettime(profile->clock_type, &time);
     profile->start_time = (long)time.tv_sec * 1000000000 + (long)time.tv_nsec;
     write_header(profile, 'S', profile->start_time);
 
@@ -147,7 +168,7 @@ static VALUE tch_profile_stop(VALUE self) {
     uint64_t itime;
 
     if (profile->recording) {
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time);
+        clock_gettime(profile->clock_type, &time);
         itime = (long)time.tv_sec * 1000000000 + (long)time.tv_nsec;
         write_header(profile, 'F', itime);
 
@@ -171,6 +192,10 @@ Init_tacho(void) {
     rb_cTachoProfile = rb_define_class_under(rb_mTacho, "Profile", rb_cObject);
 	rb_define_alloc_func(rb_cTachoProfile, tch_profile_allocate);
 	rb_define_method(rb_cTachoProfile, "initialize", tch_profile_initialize, 0);
-    rb_define_method(rb_cTachoProfile, "start", tch_profile_start, 2);
+    rb_define_method(rb_cTachoProfile, "start", tch_profile_start, 3);
     rb_define_method(rb_cTachoProfile, "stop", tch_profile_stop, 0);
+
+    id_wall = rb_intern("wall");
+    id_process = rb_intern("process");
+    id_thread = rb_intern("thread");
 }

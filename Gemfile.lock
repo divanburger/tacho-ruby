@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    tacho (0.1.0)
+    tacho (0.1.1)
 
 GEM
   remote: https://rubygems.org/
@@ -18,7 +18,7 @@ DEPENDENCIES
   bundler (~> 1.17)
   minitest (~> 5.0)
   rake (~> 10.0)
-  rake-compiler
+  rake-compiler (~> 1.0)
   tacho!
 
 BUNDLED WITH

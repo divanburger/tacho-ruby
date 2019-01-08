@@ -1,44 +1,45 @@
 require 'benchmark'
 require 'tacho'
 
+clocks = [:wall, :process, :thread]
+
 passes = 3
-iterations = 1_000_000
-tacho_time = 0
-notacho_time = 0
+iterations = 100_000
 
 def bar(v)
   a = v
+  b = v
+  c = v
+  d = v
+  e = v
 end
 
-def test_tacho
-  profile = Tacho.start 'test'
-  1_000_000.times do |i|
-    bar(i + 1)
-  end
-  profile.stop
-end
-
-def test_notacho
-  1_000_000.times do |i|
+def test
+  100_000.times do |i|
     bar(i + 1)
   end
 end
 
-passes.times do
-  puts 'Tacho:'
-  time = Benchmark.realtime { test_tacho }
-  puts time
-  tacho_time += time
-  puts '------'
-  puts 'No tacho:'
-  time = Benchmark.realtime { test_notacho }
-  puts time
-  notacho_time += time
-  puts '------'
-end
+clocks.each do |clock_type|
+  puts "#{clock_type}"
+  puts "=" * clock_type.to_s.length
 
-total_overhead_time = tacho_time - notacho_time
-puts "Total overhead: #{total_overhead_time} s"
-puts "Percentage overhead: #{100.0 - notacho_time * 100 / tacho_time} %"
-method_overhead_time = (total_overhead_time / iterations) * 1000000
-puts "Per method overhead: #{method_overhead_time} us"
+  tacho_time = 0
+  notacho_time = 0
+
+  passes.times do |pass|
+    profile = Tacho.start 'test', clock_type: clock_type
+    tacho_time += Benchmark.realtime {test}
+    profile.stop
+    notacho_time += Benchmark.realtime {test}
+    puts "Pass #{pass}"
+  end
+
+  method_calls = iterations * passes
+
+  total_overhead_time = tacho_time - notacho_time
+  puts "  Tacho method time:    #{(tacho_time / method_calls) * 1_000_000_000} ns"
+  puts "  No-tacho method time: #{(notacho_time / method_calls) * 1_000_000_000} ns"
+  method_overhead_time = (total_overhead_time / method_calls) * 1_000_000_000
+  puts "  Per method overhead:  #{method_overhead_time} ns"
+end
