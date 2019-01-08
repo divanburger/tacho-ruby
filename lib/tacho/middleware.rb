@@ -1,13 +1,13 @@
-module Tachometer
+module Tacho
   class Middleware
     def initialize app
       @app = app
     end
 
     def call(env)
-      Tachometer.enable
+      Tacho.enable
       response = @app.call(env)
-      Tachometer.disable
+      Tacho.disable
       response
     end
   end

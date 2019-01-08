@@ -11,8 +11,8 @@ require "rake/extensiontask"
 
 task :build => :compile
 
-Rake::ExtensionTask.new("tachometer") do |ext|
-  ext.lib_dir = "lib/tachometer"
+Rake::ExtensionTask.new("tacho") do |ext|
+  ext.lib_dir = "lib/tacho"
 end
 
 task :default => [:clobber, :compile, :test]

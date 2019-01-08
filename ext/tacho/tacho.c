@@ -1,4 +1,4 @@
-#include "tachometer.h"
+#include "tacho.h"
 
 #include <ruby/ruby.h>
 #include <ruby/debug.h>
@@ -8,7 +8,7 @@ static inline void write_header(tch_profile* profile, char type, uint64_t time) 
     fwrite(&c, sizeof(uint64_t), 1, profile->output);
 }
 
-static void tachometer_event(VALUE tpval, void *data) {
+static void tacho_event(VALUE tpval, void *data) {
     tch_profile* profile = (tch_profile*)data;
 
     struct timespec time;
@@ -70,8 +70,8 @@ static void tachometer_event(VALUE tpval, void *data) {
     }
 }
 
-VALUE rb_mTachometer;
-VALUE rb_cTachometerProfile;
+VALUE rb_mTacho;
+VALUE rb_cTachoProfile;
 
 static tch_profile* tch_profile_get_profile(VALUE self) {
     return (tch_profile*)RDATA(self)->data;
@@ -87,7 +87,7 @@ static void tch_profile_mark(void* data)
 }
 
 static const rb_data_type_t tch_profile_type = {
-	.wrap_struct_name = "tachometer_profile",
+	.wrap_struct_name = "tacho_profile",
 	.function = {
 		.dfree = RUBY_DEFAULT_FREE,
 		.dsize = tch_profile_size,
@@ -134,7 +134,7 @@ static VALUE tch_profile_start(VALUE self, VALUE filename, VALUE name) {
     fwrite(RSTRING_PTR(name), name_length, 1, profile->output);
     RB_GC_GUARD(name);
 
-    profile->tracepoint = rb_tracepoint_new(Qnil, RUBY_EVENT_CALL | RUBY_EVENT_RETURN, tachometer_event, profile);
+    profile->tracepoint = rb_tracepoint_new(Qnil, RUBY_EVENT_CALL | RUBY_EVENT_RETURN, tacho_event, profile);
     rb_tracepoint_enable(profile->tracepoint);
 
     return Qnil;
@@ -165,12 +165,12 @@ static VALUE tch_profile_stop(VALUE self) {
 }
 
 void
-Init_tachometer(void) {
-    rb_mTachometer = rb_define_module("Tachometer");
+Init_tacho(void) {
+    rb_mTacho = rb_define_module("Tacho");
 
-    rb_cTachometerProfile = rb_define_class_under(rb_mTachometer, "Profile", rb_cObject);
-	rb_define_alloc_func(rb_cTachometerProfile, tch_profile_allocate);
-	rb_define_method(rb_cTachometerProfile, "initialize", tch_profile_initialize, 0);
-    rb_define_method(rb_cTachometerProfile, "start", tch_profile_start, 2);
-    rb_define_method(rb_cTachometerProfile, "stop", tch_profile_stop, 0);
+    rb_cTachoProfile = rb_define_class_under(rb_mTacho, "Profile", rb_cObject);
+	rb_define_alloc_func(rb_cTachoProfile, tch_profile_allocate);
+	rb_define_method(rb_cTachoProfile, "initialize", tch_profile_initialize, 0);
+    rb_define_method(rb_cTachoProfile, "start", tch_profile_start, 2);
+    rb_define_method(rb_cTachoProfile, "stop", tch_profile_stop, 0);
 }

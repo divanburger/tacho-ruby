@@ -1,16 +1,16 @@
 
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require "tachometer/version"
+require "tacho/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "tachometer"
-  spec.version       = Tachometer::VERSION
+  spec.name          = "tacho"
+  spec.version       = Tacho::VERSION
   spec.authors       = ["Divan Burger"]
   spec.email         = ["divan@labs.epiuse.com"]
 
   spec.summary       = %q{Records performance data and displays it.}
-  spec.homepage      = "https://github.com/divanburger/tachometer"
+  spec.homepage      = "https://github.com/divanburger/tacho"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
@@ -19,8 +19,8 @@ Gem::Specification.new do |spec|
     spec.metadata["allowed_push_host"] = "TODO: Set to 'http://mygemserver.com'"
 
     spec.metadata["homepage_uri"] = spec.homepage
-    spec.metadata["source_code_uri"] = "https://github.com/divanburger/tachometer"
-    spec.metadata["changelog_uri"] = "https://github.com/divanburger/tachometer/blob/master/README.md"
+    spec.metadata["source_code_uri"] = "https://github.com/divanburger/tacho"
+    spec.metadata["changelog_uri"] = "https://github.com/divanburger/tacho/blob/master/README.md"
   else
     raise "RubyGems 2.0 or newer is required to protect against " \
       "public gem pushes."
@@ -34,7 +34,7 @@ Gem::Specification.new do |spec|
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
-  spec.extensions    = ["ext/tachometer/extconf.rb"]
+  spec.extensions    = ["ext/tacho/extconf.rb"]
 
   spec.add_development_dependency "bundler", "~> 1.17"
   spec.add_development_dependency "rake", "~> 10.0"
