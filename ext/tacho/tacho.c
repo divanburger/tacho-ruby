@@ -14,6 +14,24 @@ static inline void write_header(tch_profile* profile, char type, uint64_t time) 
     fwrite(&c, sizeof(uint64_t), 1, profile->output);
 }
 
+static inline void write_thread_switch_maybe(tch_profile* profile) {
+    char c = 'T';
+    tch_thread_switch thread_switch;
+    VALUE thread = rb_thread_current();
+    VALUE fiber = rb_fiber_current();
+
+    thread_switch.thread_id = rb_obj_id(thread);
+    thread_switch.fiber_id = rb_obj_id(fiber);
+
+    if (thread_switch.thread_id != profile->last_thread_id || thread_switch.fiber_id != profile->last_fiber_id) {
+        profile->last_thread_id = thread_switch.thread_id;
+        profile->last_fiber_id = thread_switch.fiber_id;
+
+        fwrite(&c, 1, 1, profile->output);
+        fwrite(&thread_switch, sizeof(tch_thread_switch), 1, profile->output);
+    }
+}
+
 static void tacho_event(VALUE tpval, void *data) {
     tch_profile* profile = (tch_profile*)data;
 
@@ -31,16 +49,16 @@ static void tacho_event(VALUE tpval, void *data) {
     char* cur_str;
     int i;
 
+    uint32_t return_body;
     tch_call_body call_body;
 
-    rb_trace_arg_t* trace_arg;
-    rb_event_flag_t event_flag;
-
-    trace_arg = rb_tracearg_from_tracepoint(tpval);
-    event_flag = rb_tracearg_event_flag(trace_arg);
+    rb_trace_arg_t* trace_arg = rb_tracearg_from_tracepoint(tpval);
+    rb_event_flag_t event_flag = rb_tracearg_event_flag(trace_arg);
 
     clock_gettime(profile->clock_type, &time);
     itime = (long)time.tv_sec * 1000000000 + (long)time.tv_nsec;
+
+    write_thread_switch_maybe(profile);
 
     if (event_flag == RUBY_EVENT_CALL) {
         write_header(profile, 'C', itime);
@@ -49,6 +67,7 @@ static void tacho_event(VALUE tpval, void *data) {
         path = rb_tracearg_path(trace_arg);
 
         method_id = SYM2ID(rb_tracearg_method_id(trace_arg));
+        call_body.method_id = method_id;
 
         method_name = rb_id2name(method_id);
         method_length = strlen(method_name);
@@ -73,6 +92,9 @@ static void tacho_event(VALUE tpval, void *data) {
         fwrite(cur_str, call_body.filename_length, 1, profile->output);
     } else if (event_flag == RUBY_EVENT_RETURN) {
         write_header(profile, 'R', itime);
+
+        return_body = SYM2ID(rb_tracearg_method_id(trace_arg));
+        fwrite(&return_body, sizeof(uint32_t), 1, profile->output);
     }
 }
 
